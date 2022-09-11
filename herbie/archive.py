@@ -763,10 +763,6 @@ class Herbie:
             """
             Download a subset specified by the regex searchString
             """
-            # TODO An alternative to downloadling subset with curl is
-            # TODO  to use the request module directly.
-            # TODO  >> headers = dict(Range=f"bytes={start_bytes}-{end_bytes}")
-            # TODO  >> r = requests.get(grib_url, headers=headers)
 
             grib_source = self.grib
             if hasattr(grib_source, "as_posix") and grib_source.exists():
@@ -808,14 +804,15 @@ class Herbie:
                             f"  {row.grib_message:<3g} {ANSI.orange}{row.search_this}{ANSI.reset}"
                         )
 
-                if i == 0:
-                    # If we are working on the first item, overwrite the existing file...
-                    curl = f"curl -s --range {range} {grib_source} > {outFile}"
-                else:
-                    # ...all other messages are appended to the subset file.
-                    curl = f"curl -s --range {range} {grib_source} >> {outFile}"
-                os.system(curl)
+                headers = {'Range': f"bytes={range}"}
+                content = requests.get(grib_source, headers=headers, timeout=60).content
 
+                if i == 0:
+                    with(open(outFile, 'wb') as file):
+                        file.write(content)
+                else:
+                    with(open(outFile, 'ab') as file):
+                        file.write(content)
             if verbose:
                 print(f"💾 Saved the subset to {outFile}")
 
